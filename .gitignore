@@ -1,0 +1,14 @@
+# Secret files - NEVER upload these!
+.env
+
+# Data files
+playlists.json
+stats.json
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# VS Code settings
+.vscode/
