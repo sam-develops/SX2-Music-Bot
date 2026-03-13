@@ -17,7 +17,8 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 # 🤖 Create bot
-bot = commands.Bot(command_prefix="!", intents=intents)
+# NEW - help_command=None disables the default one!
+bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 
 # ============================================
