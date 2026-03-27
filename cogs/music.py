@@ -91,7 +91,13 @@ class Music(commands.Cog):
         )
 
     def fetch_song(self, query):
-        ydl_opts = {"format": "bestaudio/best", "noplaylist": True, "quiet": True}
+        ydl_opts = {
+            "format": "bestaudio/best",
+            "noplaylist": True,
+            "quiet": True,
+            # Explicitly tell yt-dlp which JS runtime to use (must be installed and on PATH)
+            "js_runtimes": "node",
+        }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             if not query.startswith("http"):
                 info = ydl.extract_info(f"ytsearch:{query}", download=False)
@@ -102,7 +108,12 @@ class Music(commands.Cog):
 
     def fetch_related_song(self, title):
         """🆕 Fetches a related song for autoplay"""
-        ydl_opts = {"format": "bestaudio/best", "noplaylist": True, "quiet": True}
+        ydl_opts = {
+            "format": "bestaudio/best",
+            "noplaylist": True,
+            "quiet": True,
+            "js_runtimes": "node",
+        }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # Search for a related song by adding "mix" to the title
             info = ydl.extract_info(f"ytsearch:{title} mix", download=False)
