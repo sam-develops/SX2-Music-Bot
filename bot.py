@@ -20,6 +20,18 @@ intents.message_content = True
 # NEW - help_command=None disables the default one!
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
+# Default rich presence when not playing music (Discord activity name max 128 chars)
+DEFAULT_PRESENCE_NAME = "🎵 /play · SX2 Music"
+bot.idle_presence_name = DEFAULT_PRESENCE_NAME
+
+
+async def set_default_presence():
+    await bot.change_presence(
+        activity=discord.Activity(
+            type=discord.ActivityType.listening, name=DEFAULT_PRESENCE_NAME
+        )
+    )
+
 
 # ============================================
 # 📦 Load all Cogs automatically
@@ -47,6 +59,7 @@ async def load_cogs():
 @bot.event
 async def on_ready():
     await bot.tree.sync()
+    await set_default_presence()
     print(f"✅ Logged in as {bot.user}")
     print(f"🎵 SX2 Music Bot is Ready!")
 

@@ -9,6 +9,9 @@ import yt_dlp
 import asyncio
 import random
 
+# Discord activity "name" max length (Listening to …)
+_ACTIVITY_NAME_LIMIT = 128
+
 
 # ============================================
 # 🎵 Song Class
@@ -54,6 +57,38 @@ class Music(commands.Cog):
         if guild_id not in self.players:
             self.players[guild_id] = MusicPlayer()
         return self.players[guild_id]
+
+    def _truncate_activity(self, text: str) -> str:
+        if len(text) <= _ACTIVITY_NAME_LIMIT:
+            return text
+        return text[: _ACTIVITY_NAME_LIMIT - 1] + "…"
+
+    async def _update_presence(self):
+        """Show current track while audio is active; otherwise idle text."""
+        idle = getattr(self.bot, "idle_presence_name", "🎵 /play")
+        for guild in self.bot.guilds:
+            vc = guild.voice_client
+            if not vc or not (vc.is_playing() or vc.is_paused()):
+                continue
+            player = self.get_player(guild.id)
+            if player.current:
+                name = self._truncate_activity(player.current.title)
+                await self.bot.change_presence(
+                    activity=discord.Activity(
+                        type=discord.ActivityType.listening, name=name
+                    )
+                )
+                return
+        await self.bot.change_presence(
+            activity=discord.Activity(
+                type=discord.ActivityType.listening, name=idle
+            )
+        )
+
+    def schedule_presence_update(self):
+        asyncio.run_coroutine_threadsafe(
+            self._update_presence(), self.bot.loop
+        )
 
     def fetch_song(self, query):
         ydl_opts = {"format": "bestaudio/best", "noplaylist": True, "quiet": True}
@@ -123,6 +158,7 @@ class Music(commands.Cog):
                 source,
                 after=lambda e: self.play_next(interaction, voice_client, player),
             )
+            self.schedule_presence_update()
 
         # 📋 Songs in queue — play next one
         elif player.queue:
@@ -140,6 +176,7 @@ class Music(commands.Cog):
                 source,
                 after=lambda e: self.play_next(interaction, voice_client, player),
             )
+            self.schedule_presence_update()
 
         # 🎵 Autoplay — fetch related song when queue is empty
         elif player.autoplay and player.current:
@@ -165,6 +202,7 @@ class Music(commands.Cog):
                                 interaction, voice_client, player
                             ),
                         )
+                        await self._update_presence()
                         # Send a message showing autoplay picked a song
                         channel = interaction.channel
                         await channel.send(
@@ -177,6 +215,7 @@ class Music(commands.Cog):
 
         else:
             player.current = None
+            self.schedule_presence_update()
 
     # ----------------------------------------
     # 🎵 /play command
@@ -236,6 +275,7 @@ class Music(commands.Cog):
             source, after=lambda e: self.play_next(interaction, voice_client, player)
         )
 
+        await self._update_presence()
         await interaction.followup.send(embed=self.build_embed(fetched, player))
 
     # ----------------------------------------
@@ -246,6 +286,7 @@ class Music(commands.Cog):
         voice_client = interaction.guild.voice_client
         if voice_client and voice_client.is_playing():
             voice_client.pause()
+            await self._update_presence()
             await interaction.response.send_message("⏸️ Paused!")
         else:
             await interaction.response.send_message(
@@ -260,6 +301,7 @@ class Music(commands.Cog):
         voice_client = interaction.guild.voice_client
         if voice_client and voice_client.is_paused():
             voice_client.resume()
+            await self._update_presence()
             await interaction.response.send_message("▶️ Resumed!")
         else:
             await interaction.response.send_message(
@@ -292,6 +334,7 @@ class Music(commands.Cog):
             player.current = None
             player.loop = False
             voice_client.stop()
+            await self._update_presence()
             await interaction.response.send_message("⏹️ Stopped and queue cleared!")
         else:
             await interaction.response.send_message(
@@ -496,6 +539,8 @@ class Music(commands.Cog):
             source, after=lambda e: self.play_next(interaction, voice_client, player)
         )
 
+        await self._update_presence()
+
         # Format seconds nicely
         mins = seconds // 60
         secs = seconds % 60
@@ -531,6 +576,7 @@ class Music(commands.Cog):
             player.queue.clear()
             player.current = None
             await voice_client.disconnect()
+            await self._update_presence()
             await interaction.response.send_message("👋 Disconnected! See you later!")
         else:
             await interaction.response.send_message(
