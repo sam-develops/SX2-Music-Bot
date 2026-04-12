@@ -29,6 +29,7 @@ bot = commands.Bot(
 # ============================================
 async def load_cogs():
     cogs_path = os.path.join(os.path.dirname(__file__), 'cogs')
+    
 
     if not os.path.exists(cogs_path):
         os.makedirs(cogs_path)
@@ -39,6 +40,10 @@ async def load_cogs():
         if filename.endswith('.py') and filename != '__init__.py':
             await bot.load_extension(f'cogs.{filename[:-3]}')
             print(f'✅ Loaded cog: {filename}')
+            # DEBUG - remove after fixing!
+            print(f"HOST: {os.getenv('LAVALINK_HOST')}")
+            print(f"PORT: {os.getenv('LAVALINK_PORT')}")
+            print(f"PASS: {os.getenv('LAVALINK_PASSWORD')}")
 
 # ============================================
 # ✅ On Ready
