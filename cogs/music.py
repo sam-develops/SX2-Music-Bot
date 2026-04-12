@@ -82,7 +82,7 @@ class Music(commands.Cog):
     # ----------------------------------------
     # 🎵 /play
     # ----------------------------------------
-@app_commands.command(name="play", description="Play a song from YouTube!")
+        @app_commands.command(name="play", description="Play a song from YouTube!")
 @app_commands.describe(song="Song name or YouTube URL")
 async def play(self, interaction: discord.Interaction, song: str):
     await interaction.response.defer()
@@ -151,7 +151,6 @@ async def play(self, interaction: discord.Interaction, song: str):
     except Exception as e:
         await interaction.followup.send(f"❌ Playback failed: `{e}`")
         print(f"Playback error: {e}")
-
     # ----------------------------------------
     # ⏸️ /pause
     # ----------------------------------------
