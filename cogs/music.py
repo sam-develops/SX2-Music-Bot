@@ -6,7 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import wavelink
-import asyncio
+
 
 class Music(commands.Cog):
     def __init__(self, bot):
@@ -25,8 +25,6 @@ class Music(commands.Cog):
             return None
 
         voice_channel = interaction.user.voice.channel
-
-        # Get existing player or create new one
         player: wavelink.Player = interaction.guild.voice_client
 
         if player is None:
@@ -45,36 +43,26 @@ class Music(commands.Cog):
         embed = discord.Embed(
             title="🎵 Now Playing",
             description=f"**[{track.title}]({track.uri})**",
-            color=discord.Color.blurple()
+            color=discord.Color.blurple(),
         )
 
         if track.artwork:
             embed.set_thumbnail(url=track.artwork)
 
+        embed.add_field(name="👤 Artist", value=f"`{track.author}`", inline=True)
+        embed.add_field(name="⏱️ Duration", value=f"`{mins}:{secs:02d}`", inline=True)
+        embed.add_field(name="🔊 Volume", value=f"`{player.volume}%`", inline=True)
         embed.add_field(
-            name="👤 Artist",
-            value=f"`{track.author}`",
-            inline=True
-        )
-        embed.add_field(
-            name="⏱️ Duration",
-            value=f"`{mins}:{secs:02d}`",
-            inline=True
-        )
-        embed.add_field(
-            name="🔊 Volume",
-            value=f"`{player.volume}%`",
-            inline=True
-        )
-        embed.add_field(
-            name="📋 Queue",
-            value=f"`{len(player.queue)}` songs",
-            inline=True
+            name="📋 Queue", value=f"`{len(player.queue)}` songs", inline=True
         )
         embed.add_field(
             name="🔁 Loop",
-            value="`On` ✅" if player.queue.mode == wavelink.QueueMode.loop else "`Off` ❌",
-            inline=True
+            value=(
+                "`On` ✅"
+                if player.queue.mode == wavelink.QueueMode.loop
+                else "`Off` ❌"
+            ),
+            inline=True,
         )
         embed.set_footer(text="SX2 Music Bot 🎵")
         return embed
@@ -82,75 +70,69 @@ class Music(commands.Cog):
     # ----------------------------------------
     # 🎵 /play
     # ----------------------------------------
-        @app_commands.command(name="play", description="Play a song from YouTube!")
-@app_commands.describe(song="Song name or YouTube URL")
-async def play(self, interaction: discord.Interaction, song: str):
-    await interaction.response.defer()
+    @app_commands.command(name="play", description="Play a song from YouTube!")
+    @app_commands.describe(song="Song name or YouTube URL")
+    async def play(self, interaction: discord.Interaction, song: str):
+        await interaction.response.defer()
 
-    # Check if user is in voice channel
-    if not interaction.user.voice:
-        await interaction.followup.send(
-            "❌ Join a voice channel first!", ephemeral=True
-        )
-        return
-
-    try:
-        voice_channel = interaction.user.voice.channel
-        player: wavelink.Player = interaction.guild.voice_client
-
-        # Join voice channel
-        if player is None:
-            player = await voice_channel.connect(cls=wavelink.Player)
-            player.autoplay = wavelink.AutoPlayMode.disabled
-        elif player.channel != voice_channel:
-            await player.move_to(voice_channel)
-
-    except Exception as e:
-        await interaction.followup.send(f"❌ Failed to join voice channel: `{e}`")
-        print(f"Voice connect error: {e}")
-        return
-
-    try:
-        # Search for the track
-        tracks = await wavelink.Playable.search(song)
-
-        if not tracks:
-            await interaction.followup.send("❌ No results found! Try a different song name.")
+        if not interaction.user.voice:
+            await interaction.followup.send(
+                "❌ Join a voice channel first!", ephemeral=True
+            )
             return
 
-    except Exception as e:
-        await interaction.followup.send(f"❌ Search failed: `{e}`")
-        print(f"Search error: {e}")
-        return
+        try:
+            voice_channel = interaction.user.voice.channel
+            player: wavelink.Player = interaction.guild.voice_client
 
-    try:
-        track = tracks[0]
+            if player is None:
+                player = await voice_channel.connect(cls=wavelink.Player)
+                player.autoplay = wavelink.AutoPlayMode.disabled
+            elif player.channel != voice_channel:
+                await player.move_to(voice_channel)
 
-        # Add to queue or play immediately
-        if player.playing:
-            player.queue.put(track)
-            await interaction.followup.send(
-                f"📋 Added to queue: **{track.title}**\n"
-                f"> Position: `{len(player.queue)}`"
-            )
-        else:
-            await player.play(track)
-            await interaction.followup.send(
-                embed=self.build_embed(track, player)
-            )
+        except Exception as e:
+            await interaction.followup.send(f"❌ Failed to join voice channel: `{e}`")
+            print(f"Voice connect error: {e}")
+            return
 
-        # Record stats
-        stats_cog = self.bot.cogs.get('Stats')
-        if stats_cog:
-            stats_cog.record_play(
-                interaction.guild.id,
-                interaction.user.id,
-                track.title
-            )
+        try:
+            results = await wavelink.Playable.search(song)
 
-    except Exception as e:
-        await interaction.followup.send(f"❌ Playback failed: `{e}`")
-        print(f"Playback error: {e}")
+            if not results:
+                await interaction.followup.send(
+                    "❌ No results found! Try a different song name."
+                )
+                return
+
+        except Exception as e:
+            await interaction.followup.send(f"❌ Search failed: `{e}`")
+            print(f"Search error: {e}")
+            return
+
+        try:
+            track = results
+
+            if player.playing:
+                player.queue.put(track)
+                await interaction.followup.send(
+                    f"📋 Added to queue: **{track.title}**\n"
+                    f"> Position: `{len(player.queue)}`"
+                )
+            else:
+                await player.play(track)
+                await interaction.followup.send(embed=self.build_embed(track, player))
+
+            stats_cog = self.bot.cogs.get("Stats")
+            if stats_cog:
+                stats_cog.record_play(
+                    interaction.guild.id, interaction.user.id, track.title
+                )
+
+        except Exception as e:
+            await interaction.followup.send(f"❌ Playback failed: `{e}`")
+            print(f"Playback error: {e}")
+
     # ----------------------------------------
     # ⏸️ /pause
     # ----------------------------------------
@@ -282,28 +264,21 @@ async def play(self, interaction: discord.Interaction, song: str):
     async def queue(self, interaction: discord.Interaction):
         player: wavelink.Player = interaction.guild.voice_client
 
-        embed = discord.Embed(
-            title="📋 Current Queue",
-            color=discord.Color.blurple()
-        )
+        embed = discord.Embed(title="📋 Current Queue", color=discord.Color.blurple())
 
-        # Now playing
         if player and player.current:
             mins = player.current.length // 60000
             secs = (player.current.length // 1000) % 60
             embed.add_field(
                 name="🎵 Now Playing",
                 value=f"**{player.current.title}** `{mins}:{secs:02d}`",
-                inline=False
+                inline=False,
             )
         else:
             embed.add_field(
-                name="🎵 Now Playing",
-                value="Nothing playing",
-                inline=False
+                name="🎵 Now Playing", value="Nothing playing", inline=False
             )
 
-        # Queue list
         if player and player.queue:
             queue_list = ""
             for i, track in enumerate(list(player.queue)[:10], 1):
@@ -357,11 +332,10 @@ async def play(self, interaction: discord.Interaction, song: str):
         if position < 1 or position > len(player.queue):
             await interaction.response.send_message(
                 f"❌ Invalid position! Queue has {len(player.queue)} songs.",
-                ephemeral=True
+                ephemeral=True,
             )
             return
 
-        # Convert queue to list, remove, rebuild
         queue_list = list(player.queue)
         removed = queue_list.pop(position - 1)
         player.queue.clear()
@@ -389,20 +363,17 @@ async def play(self, interaction: discord.Interaction, song: str):
         if position < 1 or position > len(player.queue):
             await interaction.response.send_message(
                 f"❌ Invalid position! Queue has {len(player.queue)} songs.",
-                ephemeral=True
+                ephemeral=True,
             )
             return
 
-        # Remove songs before target position
-        queue_list = list(player.queue)[position - 1:]
+        queue_list = list(player.queue)[position - 1 :]
         player.queue.clear()
         for track in queue_list:
             player.queue.put(track)
 
         await player.skip()
-        await interaction.response.send_message(
-            f"⏭️ Jumped to position `{position}`!"
-        )
+        await interaction.response.send_message(f"⏭️ Jumped to position `{position}`!")
 
     # ----------------------------------------
     # ⏱️ /seek
@@ -418,12 +389,10 @@ async def play(self, interaction: discord.Interaction, song: str):
             )
             return
 
-        await player.seek(seconds * 1000)  # wavelink uses milliseconds
+        await player.seek(seconds * 1000)
         mins = seconds // 60
         secs = seconds % 60
-        await interaction.response.send_message(
-            f"⏱️ Seeked to **{mins}:{secs:02d}**"
-        )
+        await interaction.response.send_message(f"⏱️ Seeked to **{mins}:{secs:02d}**")
 
     # ----------------------------------------
     # 🎵 /autoplay
@@ -460,6 +429,7 @@ async def play(self, interaction: discord.Interaction, song: str):
 
         await player.disconnect()
         await interaction.response.send_message("👋 Disconnected! See you later!")
+
 
 # ============================================
 # 📦 Setup
