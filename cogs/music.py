@@ -82,25 +82,48 @@ class Music(commands.Cog):
     # ----------------------------------------
     # 🎵 /play
     # ----------------------------------------
-    @app_commands.command(name="play", description="Play a song from YouTube!")
-    @app_commands.describe(song="Song name or YouTube URL")
-    async def play(self, interaction: discord.Interaction, song: str):
-        await interaction.response.defer()
+@app_commands.command(name="play", description="Play a song from YouTube!")
+@app_commands.describe(song="Song name or YouTube URL")
+async def play(self, interaction: discord.Interaction, song: str):
+    await interaction.response.defer()
 
-        player = await self.ensure_player(interaction)
-        if not player:
-            return
+    # Check if user is in voice channel
+    if not interaction.user.voice:
+        await interaction.followup.send(
+            "❌ Join a voice channel first!", ephemeral=True
+        )
+        return
 
+    try:
+        voice_channel = interaction.user.voice.channel
+        player: wavelink.Player = interaction.guild.voice_client
+
+        # Join voice channel
+        if player is None:
+            player = await voice_channel.connect(cls=wavelink.Player)
+            player.autoplay = wavelink.AutoPlayMode.disabled
+        elif player.channel != voice_channel:
+            await player.move_to(voice_channel)
+
+    except Exception as e:
+        await interaction.followup.send(f"❌ Failed to join voice channel: `{e}`")
+        print(f"Voice connect error: {e}")
+        return
+
+    try:
         # Search for the track
-        try:
-            tracks = await wavelink.Playable.search(song)
-            if not tracks:
-                await interaction.followup.send("❌ No results found!")
-                return
-        except Exception:
-            await interaction.followup.send("❌ Error searching for that song!")
+        tracks = await wavelink.Playable.search(song)
+
+        if not tracks:
+            await interaction.followup.send("❌ No results found! Try a different song name.")
             return
 
+    except Exception as e:
+        await interaction.followup.send(f"❌ Search failed: `{e}`")
+        print(f"Search error: {e}")
+        return
+
+    try:
         track = tracks[0]
 
         # Add to queue or play immediately
@@ -124,6 +147,10 @@ class Music(commands.Cog):
                 interaction.user.id,
                 track.title
             )
+
+    except Exception as e:
+        await interaction.followup.send(f"❌ Playback failed: `{e}`")
+        print(f"Playback error: {e}")
 
     # ----------------------------------------
     # ⏸️ /pause
