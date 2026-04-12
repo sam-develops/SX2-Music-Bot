@@ -18,12 +18,11 @@ class Lyrics(commands.Cog):
         self.bot = bot
         # Connect to Genius API using our token from .env
         self.genius = lyricsgenius.Genius(
-            os.getenv("GENIUS_TOKEN"),
+            os.getenv('GENIUS_TOKEN'),
             skip_non_songs=True,
             excluded_terms=["(Remix)", "(Live)"],
-            remove_section_headers=False,
-            verbose=False,
-        )
+            remove_section_headers=False
+            )
 
     # ----------------------------------------
     # 🎶 /lyrics command
