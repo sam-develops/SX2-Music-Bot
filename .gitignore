@@ -2,6 +2,7 @@
 .env
 
 # Data files
+cookies.txt
 playlists.json
 stats.json
 

@@ -1,6 +1,5 @@
 discord.py==2.3.2
-PyNaCl==1.5.0
-yt-dlp[default]
+wavelink==3.4.1
 python-dotenv
 lyricsgenius
 supabase==1.2.0
