@@ -297,6 +297,11 @@ class Help(commands.Cog):
                         "value": "> Show info about this bot including ping and server count",
                         "inline": False,
                     },
+                    {
+                        "name": "🔗  /invite",
+                        "value": "> Get the invite link for this bot",
+                        "inline": False,
+                    },
                 ],
             },
         }
@@ -366,6 +371,35 @@ class Help(commands.Cog):
 
         embed.set_footer(text="SX2 Music Bot 🎵  •  Made with ❤️ using discord.py")
 
+        await interaction.response.send_message(embed=embed)
+
+    # ----------------------------------------
+    # 🔗 /invite command
+    # ----------------------------------------
+    @app_commands.command(name="invite", description="Get the invite link for this bot")
+    async def invite(self, interaction: discord.Interaction):
+        permissions = discord.Permissions(
+            send_messages=True,
+            read_messages=True,
+            embed_links=True,
+            connect=True,
+            speak=True,
+            use_voice_activation=True
+        )
+        invite_link = discord.utils.oauth_url(
+            self.bot.user.id,
+            permissions=permissions,
+            scopes=("bot", "applications.commands")
+        )
+        
+        embed = discord.Embed(
+            title="🔗 Invite SX2 Music Bot",
+            description=f"Invite the bot to your server by clicking [here]({invite_link})!",
+            color=discord.Color.blurple()
+        )
+        embed.set_thumbnail(url=self.bot.user.avatar.url)
+        embed.set_footer(text="SX2 Music Bot 🎵")
+        
         await interaction.response.send_message(embed=embed)
 
 
