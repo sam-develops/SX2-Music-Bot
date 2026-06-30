@@ -4,7 +4,6 @@
 
 import discord
 from discord.ext import commands
-import wavelink
 import asyncio
 import os
 from dotenv import load_dotenv
@@ -40,26 +39,14 @@ async def load_cogs():
         if filename.endswith('.py') and filename != '__init__.py':
             await bot.load_extension(f'cogs.{filename[:-3]}')
             print(f'✅ Loaded cog: {filename}')
-            # DEBUG - remove after fixing!
-            print(f"HOST: {os.getenv('LAVALINK_HOST')}")
-            print(f"PORT: {os.getenv('LAVALINK_PORT')}")
-            print(f"PASS: {os.getenv('LAVALINK_PASSWORD')}")
+
 
 # ============================================
 # ✅ On Ready
 # ============================================
 @bot.event
 async def on_ready():
-    # 🔗 Connect to Lavalink
-    try:
-        node = wavelink.Node(
-            uri=f"http://{os.getenv('LAVALINK_HOST')}:{os.getenv('LAVALINK_PORT')}",
-            password=os.getenv('LAVALINK_PASSWORD')
-        )
-        await wavelink.Pool.connect(nodes=[node], client=bot)
-        print("✅ Connected to Lavalink!")
-    except Exception as e:
-        print(f"❌ Failed to connect to Lavalink: {e}")
+
 
     # Sync slash commands
     try:
