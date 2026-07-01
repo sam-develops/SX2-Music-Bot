@@ -1,6 +1,7 @@
 # ============================================
-# 🤖 SX2 Music Bot - Main File (Lavalink)
+# 🤖 SX2 Music Bot - Main File (Native Player)
 # ============================================
+
 
 import discord
 from discord.ext import commands
