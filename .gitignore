@@ -1,5 +1,6 @@
 # Secret files - NEVER upload these!
 .env
+.venv/
 
 # Data files
 cookies.txt

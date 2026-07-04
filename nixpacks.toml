@@ -2,4 +2,4 @@
 nixPkgs = ["ffmpeg", "python311", "nodejs_20"]
 
 [start]
-cmd = "python bot.py"
+cmd = "python3.11 bot.py"
