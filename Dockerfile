@@ -1,5 +1,8 @@
 FROM python:3.12-slim
 
+# Flush stdout/stderr immediately so logs appear in Render in real time
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
 RUN apt-get update \

@@ -8,11 +8,41 @@ from discord.ext import commands
 import asyncio
 import os
 import sys
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from dotenv import load_dotenv
 
 if sys.stdout.encoding.lower() != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
+
+
+# ============================================
+# 🌐 Keep-alive HTTP server
+# ============================================
+# Render "Web Service" instances require the process to bind an open port,
+# or the deploy is marked unhealthy ("No open ports detected"). A Discord bot
+# makes an OUTBOUND connection and never listens on a port, so we run a tiny
+# HTTP server just to satisfy the port scan. Only starts when $PORT is set
+# (i.e. on Render); locally it's skipped.
+def start_keep_alive():
+    port = os.getenv('PORT')
+    if not port:
+        return
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'SX2 Music Bot is alive')
+
+        def log_message(self, *args):
+            pass  # silence per-request logging
+
+    server = HTTPServer(('0.0.0.0', int(port)), _Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    print(f'🌐 Keep-alive server listening on port {port}')
 
 # 🔑 Load token
 load_dotenv()
@@ -89,6 +119,7 @@ async def main():
     if not TOKEN:
         print("❌ DISCORD_TOKEN is not set! Check your .env file.")
         return
+    start_keep_alive()  # satisfies Render's port scan (no-op locally)
     async with bot:
         # Cogs are loaded in setup_hook() before login.
         await bot.start(TOKEN)
