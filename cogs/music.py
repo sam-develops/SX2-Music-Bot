@@ -380,8 +380,14 @@ class Music(commands.Cog):
             stats_cog = self.bot.cogs.get("Stats")
             if stats_cog:
                 try:
-                    stats_cog.record_play(
-                        interaction.guild.id, interaction.user.id, track.title
+                    # record_play does blocking Supabase network I/O — run it in
+                    # an executor so it doesn't freeze the event loop.
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(
+                        None,
+                        lambda: stats_cog.record_play(
+                            interaction.guild.id, interaction.user.id, track.title
+                        ),
                     )
                 except Exception as e:
                     print(f"Stats recording failed (non-fatal): {e}")

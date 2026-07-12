@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["ffmpeg", "python311", "nodejs_20"]
+nixPkgs = ["ffmpeg", "python312", "nodejs_20"]
 
 [start]
-cmd = "python3.11 bot.py"
+cmd = "python3.12 bot.py"

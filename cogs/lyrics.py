@@ -41,7 +41,7 @@ class Lyrics(commands.Cog):
             music_cog = self.bot.cogs.get("Music")
             if music_cog:
                 player = music_cog.get_player(interaction.guild.id)
-                if player.current:
+                if player and player.current:
                     song = player.current.title
                 else:
                     await interaction.followup.send(

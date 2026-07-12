@@ -17,10 +17,14 @@ if sys.stdout.encoding.lower() != 'utf-8':
 # 🔑 Load token
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+GUILD_ID = os.getenv('GUILD_ID')
 
 # ⚙️ Intents
+# NOTE: This bot is 100% slash commands — it never reads message text,
+# so the privileged `message_content` intent is intentionally NOT enabled.
+# Enabling it would require toggling it in the Developer Portal or the bot
+# fails to log in with PrivilegedIntentsRequired.
 intents = discord.Intents.default()
-intents.message_content = True
 
 # 🤖 Create bot
 bot = commands.Bot(
@@ -52,24 +56,41 @@ async def load_cogs():
 # ============================================
 @bot.event
 async def on_ready():
-
-
-    # Sync slash commands
-    try:
-        synced = await bot.tree.sync()
-        print(f'✅ Synced {len(synced)} slash commands!')
-    except Exception as e:
-        print(f'❌ Failed to sync commands: {e}')
-
     print(f'✅ Logged in as {bot.user}')
     print(f'🎵 SX2 Music Bot is Ready!')
+
+
+# ============================================
+# 🔄 Sync commands ONCE at startup (setup_hook runs before on_ready
+# and only fires a single time per process, unlike on_ready which can
+# re-fire on every reconnect).
+# ============================================
+@bot.event
+async def setup_hook():
+    await load_cogs()
+
+    try:
+        if GUILD_ID:
+            # Guild sync = commands appear INSTANTLY (global sync can take ~1 hour)
+            guild = discord.Object(id=int(GUILD_ID))
+            bot.tree.copy_global_to(guild=guild)
+            synced = await bot.tree.sync(guild=guild)
+            print(f'✅ Synced {len(synced)} slash commands to guild {GUILD_ID}!')
+        else:
+            synced = await bot.tree.sync()
+            print(f'✅ Synced {len(synced)} slash commands globally (may take ~1h)!')
+    except Exception as e:
+        print(f'❌ Failed to sync commands: {e}')
 
 # ============================================
 # 🚀 Start everything
 # ============================================
 async def main():
+    if not TOKEN:
+        print("❌ DISCORD_TOKEN is not set! Check your .env file.")
+        return
     async with bot:
-        await load_cogs()
+        # Cogs are loaded in setup_hook() before login.
         await bot.start(TOKEN)
 
 asyncio.run(main())

@@ -34,10 +34,10 @@ class Help(commands.Cog):
             embed = discord.Embed(color=discord.Color.blurple())
 
             embed.set_author(
-                name="SX2 Music Bot — Command Centre", icon_url=self.bot.user.avatar.url
+                name="SX2 Music Bot — Command Centre", icon_url=self.bot.user.display_avatar.url
             )
 
-            embed.set_thumbnail(url=self.bot.user.avatar.url)
+            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
 
             embed.description = (
                 "```\n"
@@ -309,7 +309,7 @@ class Help(commands.Cog):
         # Build the category embed
         data = embeds[category]
         embed = discord.Embed(title=data["title"], color=data["color"])
-        embed.set_author(name="SX2 Music Bot — Help", icon_url=self.bot.user.avatar.url)
+        embed.set_author(name="SX2 Music Bot — Help", icon_url=self.bot.user.display_avatar.url)
         for field in data["fields"]:
             embed.add_field(
                 name=field["name"], value=field["value"], inline=field["inline"]
@@ -332,12 +332,12 @@ class Help(commands.Cog):
             color=discord.Color.blurple(),
         )
 
-        embed.set_thumbnail(url=self.bot.user.avatar.url)
+        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
 
         embed.add_field(
             name="🛠️  Built With",
             value=(
-                "`Python 3.14`\n"
+                "`Python 3.12`\n"
                 "`discord.py`\n"
                 "`yt-dlp`\n"
                 "`FFmpeg`\n"
@@ -397,7 +397,7 @@ class Help(commands.Cog):
             description=f"Invite the bot to your server by clicking [here]({invite_link})!",
             color=discord.Color.blurple()
         )
-        embed.set_thumbnail(url=self.bot.user.avatar.url)
+        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
         embed.set_footer(text="SX2 Music Bot 🎵")
         
         await interaction.response.send_message(embed=embed)

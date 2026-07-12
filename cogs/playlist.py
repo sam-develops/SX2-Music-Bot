@@ -109,7 +109,7 @@ class Playlist(commands.Cog):
             music_cog = self.bot.cogs.get("Music")
             if music_cog:
                 player = music_cog.get_player(interaction.guild.id)
-                if player.current:
+                if player and player.current:
                     song_title = player.current.title
                     song_url = player.current.webpage_url
                 else:
@@ -183,11 +183,22 @@ class Playlist(commands.Cog):
             await interaction.followup.send("❌ Music system not found!")
             return
 
-        player = music_cog.get_player(interaction.guild.id)
+        # Connect to the user's voice channel (get_player returns None when
+        # the bot isn't connected yet, so we must connect explicitly here).
+        from cogs.music import GuildPlayer, Song
 
-        # Add all songs to queue
-        from cogs.music import Song
+        voice_channel = interaction.user.voice.channel
+        player = interaction.guild.voice_client
+        try:
+            if player is None:
+                player = await voice_channel.connect(cls=GuildPlayer)
+            elif player.channel != voice_channel:
+                await player.move_to(voice_channel)
+        except Exception as e:
+            await interaction.followup.send(f"❌ Failed to join voice channel: `{e}`")
+            return
 
+        # Add all songs to the queue
         for song_data in songs:
             fake_info = {
                 "url": song_data["url"],
@@ -198,12 +209,17 @@ class Playlist(commands.Cog):
             }
             player.queue.append(Song(fake_info))
 
+        # Start playback if nothing is currently playing
+        if not player.playing and not player.paused:
+            first_song = player.queue.pop(0)
+            await player.play(first_song)
+
         embed = discord.Embed(
             title="▶️ Playlist Loaded!",
             description=f"**{name}** — `{len(songs)}` songs added to queue!",
             color=discord.Color.blurple(),
         )
-        embed.set_footer(text="Use /play to start! 🎵")
+        embed.set_footer(text="Now playing 🎵")
         await interaction.followup.send(embed=embed)
 
     # ----------------------------------------

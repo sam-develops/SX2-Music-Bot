@@ -6,6 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from supabase import create_client
+from datetime import datetime, timezone
 import os
 
 
@@ -35,7 +36,7 @@ class Stats(commands.Cog):
             self.db.table("song_stats").update(
                 {
                     "play_count": existing.data[0]["play_count"] + 1,
-                    "last_played": "NOW()",
+                    "last_played": datetime.now(timezone.utc).isoformat(),
                 }
             ).eq("id", existing.data[0]["id"]).execute()
         else:
@@ -197,9 +198,7 @@ class Stats(commands.Cog):
             title=f"📊 {interaction.user.display_name}'s Stats",
             color=discord.Color.blurple(),
         )
-        embed.set_thumbnail(
-            url=interaction.user.avatar.url if interaction.user.avatar else None
-        )
+        embed.set_thumbnail(url=interaction.user.display_avatar.url)
         embed.add_field(
             name="🎵 Songs Requested",
             value=f"`{user_data['request_count']}`",
