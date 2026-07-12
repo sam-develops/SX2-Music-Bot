@@ -7,7 +7,12 @@ import discord
 from discord.ext import commands
 import asyncio
 import os
+import sys
 from dotenv import load_dotenv
+
+if sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
 
 # 🔑 Load token
 load_dotenv()

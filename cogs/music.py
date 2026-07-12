@@ -202,7 +202,7 @@ class GuildPlayer(discord.VoiceClient):
         if self.is_playing() or self.is_paused():
             super().stop()
 
-    async def stop(self):
+    def stop(self):
         self.queue.clear()
         self.current = None
         if self.is_playing() or self.is_paused():
@@ -379,9 +379,12 @@ class Music(commands.Cog):
 
             stats_cog = self.bot.cogs.get("Stats")
             if stats_cog:
-                stats_cog.record_play(
-                    interaction.guild.id, interaction.user.id, track.title
-                )
+                try:
+                    stats_cog.record_play(
+                        interaction.guild.id, interaction.user.id, track.title
+                    )
+                except Exception as e:
+                    print(f"Stats recording failed (non-fatal): {e}")
 
         except Exception as e:
             await interaction.followup.send(f"❌ Playback failed: `{e}`")
@@ -448,7 +451,7 @@ class Music(commands.Cog):
             )
             return
 
-        await player.stop()
+        player.stop()
         await interaction.response.send_message("⏹️ Stopped and queue cleared!")
 
     # ----------------------------------------
