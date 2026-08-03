@@ -31,8 +31,13 @@ ffmpeg_options = {
     'options': '-vn',
 }
 
-if os.path.exists("cookies.txt"):
-    ytdl_format_options['cookiefile'] = "cookies.txt"
+# Render "Secret Files" are mounted at /etc/secrets/<filename> and never
+# committed to git, unlike a plain cookies.txt in the repo working dir.
+_cookie_candidates = (os.getenv("COOKIES_FILE"), "cookies.txt", "/etc/secrets/cookies.txt")
+for _path in _cookie_candidates:
+    if _path and os.path.exists(_path):
+        ytdl_format_options['cookiefile'] = _path
+        break
 
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
 
