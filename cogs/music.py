@@ -9,6 +9,7 @@ import yt_dlp
 import asyncio
 import os
 import random
+import re
 
 # ============================================
 # ⚙️ YT-DLP & FFmpeg Configuration
@@ -53,6 +54,23 @@ class AutoPlayMode:
     enabled = 1
 
 # ============================================
+# 🧹 Title Cleanup
+# ============================================
+# Strips common YouTube upload noise (e.g. "(Official Music Video)",
+# "[Lyrics]", "(HD)") so queue/now-playing displays stay readable.
+_TITLE_NOISE_RE = re.compile(
+    r"[\(\[]\s*(?:official\s*(?:music\s*)?video|official\s*audio|"
+    r"official\s*lyric\s*video|lyric\s*video|lyrics?|audio|hd|4k|hq|"
+    r"visualizer|mv)\s*[\)\]]",
+    re.IGNORECASE,
+)
+
+def clean_title(title: str) -> str:
+    cleaned = _TITLE_NOISE_RE.sub("", title)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip(" -|")
+    return cleaned or title
+
+# ============================================
 # 🎵 Song Data Structure
 # ============================================
 class Song:
@@ -60,7 +78,7 @@ class Song:
         self.source_url = data.get('webpage_url') or data.get('url')
         self.stream_url = data.get('url')
         self.url = self.source_url
-        self.title = data.get('title') or "Unknown Title"
+        self.title = clean_title(data.get('title') or "Unknown Title")
         self.duration = data.get('duration') or 0  # in seconds
         self.length = int(self.duration * 1000)  # in milliseconds
         self.thumbnail = data.get('thumbnail')
@@ -391,7 +409,7 @@ class Music(commands.Cog):
             if player.playing:
                 player.queue.put(track)
                 await interaction.followup.send(
-                    f"📋 Added to queue: **{track.title}**\n"
+                    f"📋 Added to queue: [**{track.title}**]({track.uri})\n"
                     f"> Position: `{len(player.queue)}`"
                 )
             else:
@@ -554,7 +572,7 @@ class Music(commands.Cog):
             secs = (player.current.length // 1000) % 60
             embed.add_field(
                 name="🎵 Now Playing",
-                value=f"**{player.current.title}** `{mins}:{secs:02d}`",
+                value=f"[**{player.current.title}**]({player.current.uri}) `{mins}:{secs:02d}`",
                 inline=False,
             )
         else:
@@ -567,7 +585,7 @@ class Music(commands.Cog):
             for i, track in enumerate(list(player.queue)[:10], 1):
                 mins = track.length // 60000
                 secs = (track.length // 1000) % 60
-                queue_list += f"`{i}.` **{track.title}** `{mins}:{secs:02d}`\n"
+                queue_list += f"`{i}.` [**{track.title}**]({track.uri}) `{mins}:{secs:02d}`\n"
             if len(player.queue) > 10:
                 queue_list += f"\n*...and {len(player.queue) - 10} more songs*"
             embed.add_field(name="⏭️ Up Next", value=queue_list, inline=False)
@@ -621,7 +639,7 @@ class Music(commands.Cog):
 
         removed = player.queue.pop(position - 1)
         await interaction.response.send_message(
-            f"🗑️ Removed **{removed.title}** from position `{position}`"
+            f"🗑️ Removed [**{removed.title}**]({removed.uri}) from position `{position}`"
         )
 
     # ----------------------------------------
