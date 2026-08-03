@@ -52,14 +52,16 @@ class AutoPlayMode:
 # ============================================
 class Song:
     def __init__(self, data: dict):
-        self.url = data.get('url')
+        self.source_url = data.get('webpage_url') or data.get('url')
+        self.stream_url = data.get('url')
+        self.url = self.source_url
         self.title = data.get('title') or "Unknown Title"
         self.duration = data.get('duration') or 0  # in seconds
         self.length = int(self.duration * 1000)  # in milliseconds
         self.thumbnail = data.get('thumbnail')
         self.artwork = data.get('thumbnail')
-        self.webpage_url = data.get('webpage_url') or data.get('url')
-        self.uri = data.get('webpage_url') or data.get('url')
+        self.webpage_url = data.get('webpage_url') or self.source_url
+        self.uri = self.webpage_url
         self.author = data.get('uploader') or data.get('artist') or "Unknown Artist"
 
 # ============================================
@@ -129,25 +131,27 @@ class GuildPlayer(discord.VoiceClient):
         self.current = song
         try:
             loop = asyncio.get_event_loop()
-            is_direct = False
-            if song.url:
-                if "videoplayback" in song.url or song.url.endswith((".mp3", ".ogg", ".wav", ".flac", ".m4a")):
-                    is_direct = True
-            
-            if is_direct:
-                stream_url = song.url
-            else:
-                # We need to extract the stream URL
-                url_to_extract = song.url if song.url else f"ytsearch1:{song.title}"
+
+            def is_direct_source(url: str):
+                return bool(url and ("videoplayback" in url or url.endswith((".mp3", ".ogg", ".wav", ".flac", ".m4a"))))
+
+            stream_url = song.stream_url
+            if not stream_url or (song.source_url and not is_direct_source(song.source_url)):
+                # Re-extract the stream URL from the stable video/page source to avoid stale URLs.
+                url_to_extract = song.source_url or f"ytsearch1:{song.title}"
                 data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url_to_extract, download=False))
                 if 'entries' in data:
                     data = data['entries'][0]
+
                 stream_url = data['url']
-                song.url = stream_url
+                song.stream_url = stream_url
+                song.source_url = data.get('webpage_url') or song.source_url
+                song.url = song.source_url
+                song.webpage_url = data.get('webpage_url') or song.webpage_url
                 if data.get('duration'):
                     song.duration = data.get('duration')
                     song.length = int(song.duration * 1000)
-
+            
             # Create FFmpeg PCMAudio source
             audio_source = discord.FFmpegPCMAudio(stream_url, **ffmpeg_options)
             self.source_transformer = discord.PCMVolumeTransformer(audio_source, volume=self.volume_level)
@@ -225,8 +229,20 @@ class GuildPlayer(discord.VoiceClient):
         
         loop = asyncio.get_event_loop()
         try:
-            # Play from seeked position
-            audio_source = discord.FFmpegPCMAudio(self.current.url, **ffmpeg_options_seek)
+            # Refresh the stream URL before seeking if needed.
+            if not self.current.stream_url or (
+                self.current.source_url and "videoplayback" not in self.current.stream_url
+            ):
+                data = await loop.run_in_executor(
+                    None,
+                    lambda: ytdl.extract_info(self.current.source_url, download=False),
+                )
+                if 'entries' in data:
+                    data = data['entries'][0]
+                self.current.stream_url = data['url']
+                self.current.url = self.current.source_url
+
+            audio_source = discord.FFmpegPCMAudio(self.current.stream_url, **ffmpeg_options_seek)
             self.source_transformer = discord.PCMVolumeTransformer(audio_source, volume=self.volume_level)
             self._seeking = False
             super().play(self.source_transformer, after=self.play_next)
