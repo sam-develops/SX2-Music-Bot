@@ -106,6 +106,13 @@ async def setup_hook():
             bot.tree.copy_global_to(guild=guild)
             synced = await bot.tree.sync(guild=guild)
             print(f'✅ Synced {len(synced)} slash commands to guild {GUILD_ID}!')
+
+            # Remove any commands left registered globally from a previous
+            # run (e.g. before GUILD_ID was set). Otherwise Discord shows
+            # both the global and guild copies as duplicate entries.
+            bot.tree.clear_commands(guild=None)
+            await bot.tree.sync()
+            print('🧹 Cleared stale global command registrations')
         else:
             synced = await bot.tree.sync()
             print(f'✅ Synced {len(synced)} slash commands globally (may take ~1h)!')
